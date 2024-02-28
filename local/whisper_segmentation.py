@@ -6,7 +6,7 @@ import argparse
 from pathlib import Path
 
 import torch
-import whisper
+import whisper_timestamped as whisper
 from whisper.normalizers import EnglishTextNormalizer
 from num2words import num2words
 from tqdm import tqdm
@@ -42,28 +42,33 @@ def get_args():
 
 def post_process_segments(segments):
     processed_segments = []
-    start_time = None
-    text = ""
+    start = None
+    sentence_list = []
 
     for segment in segments:
-        cur_start_time = segment["start"]
-        cur_end_time = segment["end"]
-        cur_text = segment["text"]
+        words = segment["words"]
+        for word_info in words:
+            word = word_info["text"]
+            cur_start, cur_end = word_info["start"], word_info["end"]
 
-        if start_time is None or not text:
-            start_time = cur_start_time
+            if start is None:
+                start = cur_start
 
-        text += cur_text
-        # add segment if it's a full sentence (end with period)
-        if text.endswith("."):
-            end_time = cur_end_time
-            processed_segments.append((start_time, end_time, text))
-            text = ""
+            sentence_list.append(word)
+
+            # EOS
+            if word.endswith(".") or word.endswith("?"):
+                sentence = " ".join(sentence_list)
+                processed_segments.append((start, cur_end, sentence))
+
+                sentence_list = []
+                start = None
+
     # check if the last segment is add (it may not end with period)
-    if text:
-        text += "."
-        end_time = cur_end_time
-        processed_segments.append((start_time, end_time, text))
+    if sentence_list:
+        sentence = " ".join(sentence_list)
+        end = cur_end
+        processed_segments.append((start, end, sentence))
 
     return processed_segments
 
@@ -90,8 +95,7 @@ def main():
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    model = whisper.load_model(f"{model_size}.{language}")
-    model = model.to(device)
+    model = whisper.load_model(f"{model_size}.{language}", device=device)
 
     normalizer = EnglishTextNormalizer()
 
@@ -101,10 +105,13 @@ def main():
         with open(wav_scp, "r") as ws:
             for line in tqdm(ws):
                 wav_id, wav_path = line.strip().split()
-                result = model.transcribe(wav_path)
+                audio = whisper.load_audio(wav_path)
+                result = whisper.transcribe(model, audio)
 
-                segments = post_process_segments(result["segments"])
-                for segment in segments:
+                segments = result["segments"]
+                post_segments = post_process_segments(segments)
+
+                for segment in post_segments:
                     start_time, end_time, text = segment
                     normalized_text = normalize_text(text, normalizer)
 
