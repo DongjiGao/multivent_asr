@@ -106,7 +106,17 @@ def main():
             for line in tqdm(ws):
                 wav_id, wav_path = line.strip().split()
                 audio = whisper.load_audio(wav_path)
-                result = whisper.transcribe(model, audio)
+
+                try:
+                    result = whisper.transcribe(
+                        model,
+                        audio,
+                        beam_size=5,
+                        best_of=5,
+                        temperature=(0.0, 0.2, 0.4, 0.6, 0.8, 1.0),
+                    )
+                except:
+                    print(wav_id)
 
                 segments = result["segments"]
                 post_segments = post_process_segments(segments)
@@ -115,18 +125,19 @@ def main():
                     start_time, end_time, text = segment
                     normalized_text = normalize_text(text, normalizer)
 
-                    st_str = format(
-                        int(format(start_time, "0.3f").replace(".", "")), "08d"
-                    )
-                    et_str = format(
-                        int(format(end_time, "0.3f").replace(".", "")), "08d"
-                    )
-                    segment_id = f"{wav_id}-{st_str}-{et_str}"
+                    if normalized_text:
+                        st_str = format(
+                            int(format(start_time, "0.3f").replace(".", "")), "08d"
+                        )
+                        et_str = format(
+                            int(format(end_time, "0.3f").replace(".", "")), "08d"
+                        )
+                        segment_id = f"{wav_id}-{st_str}-{et_str}"
 
-                    seg.write(
-                        f"{segment_id} {wav_id} {start_time:.3f} {end_time:.3f}\n"
-                    )
-                    ot.write(f"{segment_id} {normalized_text}\n")
+                        seg.write(
+                            f"{segment_id} {wav_id} {start_time:.3f} {end_time:.3f}\n"
+                        )
+                        ot.write(f"{segment_id} {normalized_text}\n")
 
 
 if __name__ == "__main__":
