@@ -7,7 +7,10 @@ from pathlib import Path
 
 import torch
 import whisper
+from whisper.normalizers import EnglishTextNormalizer
+from num2words import num2words
 from tqdm import tqdm
+
 
 def get_args():
     parser = argparse.ArgumentParser(description="This script creates wav.scp file")
@@ -19,9 +22,15 @@ def get_args():
     parser.add_argument(
         "--model-size",
         type=str,
-        choices=["tiny", "base", "small", "medium", "large"],
-        default="large",
+        choices=["tiny", "base", "small", "medium"],
+        default="medium",
         help="model size",
+    )
+    parser.add_argument(
+        "--language",
+        type=str,
+        default="en",
+        help="language",
     )
     parser.add_argument(
         "--output-dir",
@@ -59,15 +68,32 @@ def post_process_segments(segments):
     return processed_segments
 
 
+def normalize_text(text, normalizer):
+    text = normalizer(text)
+    normalized_text_list = []
+
+    for word in text.split():
+        if word.isnumeric():
+            word = num2words(word).replace("-", " ")
+        normalized_text_list.append(word)
+    normalized_text = " ".join(normalized_text_list).upper()
+
+    return normalized_text
+
+
 def main():
     args = get_args()
     wav_scp = Path(args.wav_scp)
     output_dir = Path(args.output_dir)
     model_size = args.model_size
+    language = args.language
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    model = whisper.load_model(model_size)
+
+    model = whisper.load_model(f"{model_size}.{language}")
     model = model.to(device)
+
+    normalizer = EnglishTextNormalizer()
 
     with open(output_dir / "segments", "w") as seg, open(
         output_dir / "text", "w"
@@ -80,6 +106,7 @@ def main():
                 segments = post_process_segments(result["segments"])
                 for segment in segments:
                     start_time, end_time, text = segment
+                    normalized_text = normalize_text(text, normalizer)
 
                     st_str = format(
                         int(format(start_time, "0.3f").replace(".", "")), "08d"
@@ -89,8 +116,10 @@ def main():
                     )
                     segment_id = f"{wav_id}-{st_str}-{et_str}"
 
-                    seg.write(f"{segment_id} {wav_id} {start_time:.3f} {end_time:.3f}\n")
-                    ot.write(f"{segment_id} {text}\n")
+                    seg.write(
+                        f"{segment_id} {wav_id} {start_time:.3f} {end_time:.3f}\n"
+                    )
+                    ot.write(f"{segment_id} {normalized_text}\n")
 
 
 if __name__ == "__main__":
