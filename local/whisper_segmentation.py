@@ -30,6 +30,12 @@ def get_args():
         help="language",
     )
     parser.add_argument(
+        "--max-duration",
+        type=float,
+        default=20.0,
+        help="max duration of the segment",
+    )
+    parser.add_argument(
         "--output-dir",
         type=str,
         help="path to the output directory",
@@ -37,7 +43,7 @@ def get_args():
     return parser.parse_args()
 
 
-def post_process_segments(segments):
+def post_process_segments(segments, max_duration):
     processed_segments = []
     start = None
     sentence_list = []
@@ -60,6 +66,13 @@ def post_process_segments(segments):
 
                 sentence_list = []
                 start = None
+        # Check if current segment length >= max duration allowed for segment
+        cur_duration = cur_end - start
+        if cur_duration >= max_duration:
+            sentence = " ".join(sentence_list)
+            processed_segments.append((start, cur_end, sentence))
+            sentence_list = []
+            start = None
 
     # check if the last segment is add (it may not end with period)
     if sentence_list:
@@ -77,6 +90,7 @@ def main():
     output_dir = Path(args.output_dir)
     model_size = args.model_size
     language = args.language
+    max_duration = args.max_duration
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -90,6 +104,7 @@ def main():
                 wav_id, wav_path = line.strip().split()
                 audio = whisper.load_audio(wav_path)
 
+                print(f"id: {wav_id}")
                 result = whisper.transcribe(
                     model,
                     audio,
@@ -101,7 +116,7 @@ def main():
                 segments = result["segments"]
 
                 # re-segment based on punctuation ("." or "?")
-                post_segments = post_process_segments(segments)
+                post_segments = post_process_segments(segments, max_duration)
 
                 for segment in post_segments:
                     start_time, end_time, text = segment
