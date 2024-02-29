@@ -7,13 +7,10 @@ from pathlib import Path
 
 import torch
 import whisper_timestamped as whisper
-from whisper.normalizers import EnglishTextNormalizer
-from num2words import num2words
-from tqdm import tqdm
 
 
 def get_args():
-    parser = argparse.ArgumentParser(description="This script creates wav.scp file")
+    parser = argparse.ArgumentParser()
     parser.add_argument(
         "--wav-scp",
         type=str,
@@ -67,23 +64,11 @@ def post_process_segments(segments):
     # check if the last segment is add (it may not end with period)
     if sentence_list:
         sentence = " ".join(sentence_list)
+
         end = cur_end
         processed_segments.append((start, end, sentence))
 
     return processed_segments
-
-
-def normalize_text(text, normalizer):
-    text = normalizer(text)
-    normalized_text_list = []
-
-    for word in text.split():
-        if word.isnumeric():
-            word = num2words(word).replace("-", " ")
-        normalized_text_list.append(word)
-    normalized_text = " ".join(normalized_text_list).upper()
-
-    return normalized_text
 
 
 def main():
@@ -97,35 +82,31 @@ def main():
 
     model = whisper.load_model(f"{model_size}.{language}", device=device)
 
-    normalizer = EnglishTextNormalizer()
-
-    with open(output_dir / "segments", "w") as seg, open(
-        output_dir / "text", "w"
+    with open(output_dir / "segments_raw", "w") as seg, open(
+        output_dir / "text_raw", "w"
     ) as ot:
         with open(wav_scp, "r") as ws:
-            for line in tqdm(ws):
+            for line in ws:
                 wav_id, wav_path = line.strip().split()
                 audio = whisper.load_audio(wav_path)
 
-                try:
-                    result = whisper.transcribe(
-                        model,
-                        audio,
-                        beam_size=5,
-                        best_of=5,
-                        temperature=(0.0, 0.2, 0.4, 0.6, 0.8, 1.0),
-                    )
-                except:
-                    print(wav_id)
+                result = whisper.transcribe(
+                    model,
+                    audio,
+                    beam_size=5,
+                    best_of=5,
+                    temperature=(0.0, 0.2, 0.4, 0.6, 0.8, 1.0),
+                )
 
                 segments = result["segments"]
+
+                # re-segment based on punctuation ("." or "?")
                 post_segments = post_process_segments(segments)
 
                 for segment in post_segments:
                     start_time, end_time, text = segment
-                    normalized_text = normalize_text(text, normalizer)
 
-                    if normalized_text:
+                    if text:
                         st_str = format(
                             int(format(start_time, "0.3f").replace(".", "")), "08d"
                         )
@@ -137,7 +118,7 @@ def main():
                         seg.write(
                             f"{segment_id} {wav_id} {start_time:.3f} {end_time:.3f}\n"
                         )
-                        ot.write(f"{segment_id} {normalized_text}\n")
+                        ot.write(f"{segment_id} {text}\n")
 
 
 if __name__ == "__main__":
