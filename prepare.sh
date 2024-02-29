@@ -10,6 +10,8 @@ stop_stage=100
 corpus_dir="/exp/mmohammadi/multiVENT/data_wav"
 data_dir="data"
 manifest_dir="${data_dir}/manifests"
+feature_type="fbank"
+feture_dir="${data_dir}/${feature_type}"
 
 . ./cmd.sh
 . shared/parse_options.sh || exit 1
@@ -22,12 +24,7 @@ log() {
 
 events=(
     emergency_data
-    police_data
-    social_data
-    technology_data
-)
-events=(
-    police_data
+    political_data
     social_data
     technology_data
 )
@@ -43,7 +40,7 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     log "stage 0: Preparing wav file for each event and language."
     wav_dir="wav_files"
     for event in ${events[@]}; do
-        for langugage in ${languages[@]}; do
+        for language in ${languages[@]}; do
             log "Processing ${event} ${language}"
 
             output_wav_scp_dir="${data_dir}/${event}_${language}"
@@ -81,6 +78,7 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
     for event in ${events[@]}; do
         for language in ${languages[@]}; do
             log "Processing ${event} ${language}"
+
             text="${data_dir}/${event}_${language}/text_raw"
             segments="${data_dir}/${event}_${language}/segments_raw"
             output_dir="${data_dir}/${event}_${language}"
@@ -108,6 +106,38 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
                 --manifest-dir "${manifest_dir}"
         done
     done
+fi
+
+if [ $stage -le 4 ] && [ $stop_stage -ge 4 ]; then
+    log "Stage 4: Compute ${feature_type} feature for multiVENT"
+    mkdir -p "${feature_dir}"
+
+    if [ -e "${feature_dir}/.multivent.done" ]; then
+        echo "Skip feature extraction since it has been done."
+    else
+        if [ "${feature_type}" = fbank ]; then
+            for event in ${events[@]}; do
+                for language in ${langauges[@]}; do
+                    log "Processing ${event} ${language} for ${feature_type} feature"
+
+                    ./local/compute_fbank_multivent.py \
+                        --dataset "${data_dir}/${event}_${langauge}" \
+                        --perturb-speed false
+
+                    lhotse cut trim-to-supervisions --discard-overlapping \
+                        "${feature_dir}/multivent_cuts_${event}_${language}.jsonl.gz" - | \
+                        gzip -c > "${feature_dir}/multivent_cuts_${event}_${langauge}_trimmed.jsonl.gz"
+
+                    ./local/validate_manifest.py \
+                        "${feature_dir}/multivent_cuts_${event}_${language}_trimmed.jsonl.gz"
+                done
+            done
+        else
+            log "Error: not supported --feature-type '${feature_type}'"
+            exit 2
+        fi
+        touch "${feature_dir}/.multivent.done"
+    fi
 fi
 
 exit 0;
