@@ -47,7 +47,7 @@ def main():
     start = None
     with open(ctm_file, "r") as f:
         for line in f:
-            word_id, _, word_start_str, word_duration_str, word = line.strip().split()
+            word_id, _, word_start_str, word_duration_str, word = line.strip().split(" ", 4)
             reco_id = "_".join(word_id.split("_")[:-1])
 
             # new recordings
