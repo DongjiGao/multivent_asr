@@ -82,13 +82,13 @@ def main():
         with open(segments_file, "r") as sf:
             with open(output_dir / "segments", "w") as seg:
                 for line in sf:
-                    seg_id, _, start_time, end_time = line.strip().split()
+                    seg_id, reco_id, start_time, end_time = line.strip().split()
                     assert seg_id not in seg_dict
-                    seg_dict[seg_id] = (start_time, end_time)
+                    seg_dict[seg_id] = (reco_id, start_time, end_time)
 
                 for seg_id in seg_ids:
-                    start_time, end_time = seg_dict[seg_id]
-                    seg.write(f"{seg} {start_time} {end_time}\n")
+                    reco_id, start_time, end_time = seg_dict[seg_id]
+                    seg.write(f"{seg_id} {reco_id} {start_time} {end_time}\n")
 
 
 if __name__ == "__main__":

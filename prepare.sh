@@ -10,8 +10,9 @@ stop_stage=100
 corpus_dir="/exp/mmohammadi/multiVENT/data_wav"
 data_dir="data"
 manifest_dir="${data_dir}/manifests"
+
 feature_type="fbank"
-feture_dir="${data_dir}/${feature_type}"
+feature_dir="${data_dir}/${feature_type}"
 
 . ./cmd.sh
 . shared/parse_options.sh || exit 1
@@ -29,6 +30,9 @@ events=(
     technology_data
 )
 
+events=(
+    emergency_data
+)
 
 languages=(
     en
@@ -65,7 +69,7 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
             output_dir="${wav_dir}"
 
 #            ${cuda_cmd} log/segmentation_${event}_${language}.log \
-            local/whisper_segmentation.py \
+            local/whisper_ctm.py \
                 --wav-scp "${wav_dir}/wav.scp" \
                 --output-dir "${output_dir}"
         done
@@ -73,7 +77,21 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
 fi
 
 if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
-    log "stage 2: Normalizing text"
+    log "stage 2: Generating segments from CTM file."
+
+    for event in ${events[@]}; do
+        for language in ${languages[@]}; do
+            log "Processing ${event} ${language}"
+
+            local/segment.py \
+                --ctm "${data_dir}/${event}_${language}/ctm" \
+                --output-dir "${data_dir}/${event}_${language}"
+        done
+    done
+fi
+
+if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
+    log "stage 3: Normalizing text"
 
     for event in ${events[@]}; do
         for language in ${languages[@]}; do
@@ -91,8 +109,8 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
     done
 fi
 
-if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
-    log "stage 3: Making Lhoste manifest."
+if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
+    log "stage 4: Making Lhoste manifest."
 
     mkdir -p "${manifest_dir}"
     for event in ${events[@]}; do
@@ -108,8 +126,8 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
     done
 fi
 
-if [ $stage -le 4 ] && [ $stop_stage -ge 4 ]; then
-    log "Stage 4: Compute ${feature_type} feature for multiVENT"
+if [ $stage -le 5 ] && [ $stop_stage -ge 5 ]; then
+    log "Stage 5: Compute ${feature_type} feature for multiVENT"
     mkdir -p "${feature_dir}"
 
     if [ -e "${feature_dir}/.multivent.done" ]; then
@@ -117,16 +135,18 @@ if [ $stage -le 4 ] && [ $stop_stage -ge 4 ]; then
     else
         if [ "${feature_type}" = fbank ]; then
             for event in ${events[@]}; do
-                for language in ${langauges[@]}; do
+                for language in ${languages[@]}; do
                     log "Processing ${event} ${language} for ${feature_type} feature"
 
                     ./local/compute_fbank_multivent.py \
-                        --dataset "${data_dir}/${event}_${langauge}" \
+                        --manifest-dir "${manifest_dir}" \
+                        --output-dir "${feature_dir}" \
+                        --dataset "${event}_${language}" \
                         --perturb-speed false
 
                     lhotse cut trim-to-supervisions --discard-overlapping \
                         "${feature_dir}/multivent_cuts_${event}_${language}.jsonl.gz" - | \
-                        gzip -c > "${feature_dir}/multivent_cuts_${event}_${langauge}_trimmed.jsonl.gz"
+                        gzip -c > "${feature_dir}/multivent_cuts_${event}_${language}_trimmed.jsonl.gz"
 
                     ./local/validate_manifest.py \
                         "${feature_dir}/multivent_cuts_${event}_${language}_trimmed.jsonl.gz"

@@ -52,6 +52,11 @@ def get_args():
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
+        "--manifest-dir",
+        type=str,
+        help="""Path to the directory where the manifests are stored.""",
+    )
+    parser.add_argument(
         "--bpe-model",
         type=str,
         help="""Path to the bpe.model. If not None, we will remove short and
@@ -70,17 +75,24 @@ def get_args():
         default=False,
         help="""Perturb speed with factor 0.9 and 1.1 on train subset.""",
     )
+    parser.add_argument(
+        "--output-dir",
+        type=str,
+        help="""Path to the directory where to store cut sets.""",
+    )
 
     return parser.parse_args()
 
 
-def compute_fbank_mixer6(
+def compute_fbank_multivent(
+    manifest_dir: Path,
+    feature_dir: Path,
     bpe_model: Optional[str] = None,
     dataset: Optional[str] = None,
     perturb_speed: Optional[bool] = True,
 ):
-    src_dir = Path("data/manifests")
-    output_dir = Path("data/fbank")
+    src_dir = manifest_dir
+    output_dir = feature_dir
     num_jobs = min(100, os.cpu_count())
     num_mel_bins = 80
 
@@ -89,14 +101,10 @@ def compute_fbank_mixer6(
         sp = spm.SentencePieceProcessor()
         sp.load(bpe_model)
 
-    if dataset is None:
-        dataset_parts = (
-            "dev_a_CH12",
-        )
-    else:
-        dataset_parts = dataset.split(" ", -1)
+    assert dataset is not None
+    dataset_parts = dataset.split(" ", -1)
 
-    prefix = "mixer6"
+    prefix = "multivent"
     suffix = "jsonl.gz"
     manifests = read_manifests_if_cached(
         dataset_parts=dataset_parts,
@@ -127,7 +135,6 @@ def compute_fbank_mixer6(
                 recordings=m["recordings"],
                 supervisions=m["supervisions"],
             )
-            #            cut_set = cut_set.trim_to_supervisions()
 
             if "train" in partition:
                 if bpe_model:
@@ -156,8 +163,13 @@ if __name__ == "__main__":
 
     logging.basicConfig(format=formatter, level=logging.INFO)
     args = get_args()
+    manifest_dir = Path(args.manifest_dir)
+    feature_dir = Path(args.output_dir)
+
     logging.info(vars(args))
-    compute_fbank_mixer6(
+    compute_fbank_multivent(
+        manifest_dir,
+        feature_dir,
         bpe_model=args.bpe_model,
         dataset=args.dataset,
         perturb_speed=args.perturb_speed,
