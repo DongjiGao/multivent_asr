@@ -31,7 +31,9 @@ events=(
 )
 
 events=(
-    emergency_data
+    political_data
+    social_data
+    technology_data
 )
 
 languages=(
@@ -60,7 +62,7 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
 fi
 
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
-    log "stage 1: Generating segments using WHISPER."
+    log "stage 1: Generating CTM file using WHISPER."
 
     for event in ${events[@]}; do
         for language in ${languages[@]}; do

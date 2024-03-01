@@ -43,7 +43,6 @@ def main():
     output_dir = Path(args.output_dir)
     model_size = args.model_size
     language = args.language
-    max_duration = args.max_duration
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
