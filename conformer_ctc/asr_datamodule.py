@@ -351,5 +351,5 @@ class MultiVENTAsrDataModule:
         logging.info("About to get multiVENT cuts")
         return load_manifest_lazy(
             self.args.manifest_dir
-            / f"multivent_cuts_${self.args.event}_${self.args.language}_trimmed_filtered.jsonl.gz"
+            / f"multivent_cuts_{self.args.event}_{self.args.language}_trimmed_filtered.jsonl.gz"
         )
