@@ -18,7 +18,22 @@ log() {
   echo -e "$(date '+%Y-%m-%d %H:%M:%S') (${fname}:${BASH_LINENO[0]}:${FUNCNAME[1]}) $*"
 }
 
-./conformer_ctc/decode.py \
-    --method "${decoding_method}" \
-    --exp-dir "${exp_dir}" \
-    --lang-dir "${lang_dir}" 
+events=(
+    emergency_data
+)
+
+languages=(
+    en
+)
+
+for event in ${events[@]}; do
+    for language in ${languages[@]}; do
+        log "Aligning ${event} ${language}"
+        ./conformer_ctc/otc_alignment.py \
+            --event "${event}" \
+            --language "${language}" \
+            --method "${decoding_method}" \
+            --exp-dir "${exp_dir}" \
+            --lang-dir "${lang_dir}" 
+   done
+done

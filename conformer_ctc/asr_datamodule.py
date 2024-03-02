@@ -36,12 +36,12 @@ from torch.utils.data import DataLoader
 from icefall.utils import str2bool
 
 
-class GigaSpeechAsrDataModule:
+class MultiVENTAsrDataModule:
     """
     DataModule for k2 ASR experiments.
     It assumes there is always one train and valid dataloader,
-    but there can be multiple test dataloaders (e.g. LibriSpeech test-clean
-    and test-other).
+    but there can be multiple test dataloaders (e.g. emergency_data_en
+    and political_data_en).
 
     It contains all the common data pipeline modules used in ASR
     experiments, e.g.:
@@ -167,23 +167,21 @@ class GigaSpeechAsrDataModule:
         group.add_argument(
             "--enable-musan",
             type=str2bool,
-            default=True,
+            default=False,
             help="When enabled, select noise from MUSAN and mix it "
             "with training dataset. ",
         )
 
-        # GigaSpeech specific arguments
         group.add_argument(
-            "--subset",
+            "--event",
             type=str,
-            default="XL",
-            help="Select the GigaSpeech subset (XS|S|M|L|XL)",
+            help="The event name for which the data module is created. ",
         )
+
         group.add_argument(
-            "--small-dev",
-            type=str2bool,
-            default=False,
-            help="Should we use only 1000 utterances for dev (speeds up training)",
+            "--language",
+            type=str,
+            help="The language of the event for which the data module is created. ",
         )
 
     def train_dataloaders(self, cuts_train: CutSet) -> DataLoader:
@@ -349,20 +347,9 @@ class GigaSpeechAsrDataModule:
         return cuts_train
 
     @lru_cache()
-    def dev_cuts(self) -> CutSet:
-        logging.info("About to get dev cuts")
-        cuts_valid = load_manifest_lazy(self.args.manifest_dir / "cuts_DEV.jsonl.gz")
-        if self.args.small_dev:
-            return cuts_valid.subset(first=1000)
-        else:
-            return cuts_valid
-
-    @lru_cache()
-    def test_cuts(self) -> CutSet:
-        logging.info("About to get test cuts")
-        return load_manifest_lazy(self.args.manifest_dir / "cuts_TEST.jsonl.gz")
-
-    @lru_cache()
     def multivent_cuts(self) -> CutSet:
         logging.info("About to get multiVENT cuts")
-        return load_manifest_lazy(self.args.manifest_dir / "multivent_cuts_emergency_data_en_trimmed_filtered.jsonl.gz")
+        return load_manifest_lazy(
+            self.args.manifest_dir
+            / f"multivent_cuts_${self.args.event}_${self.args.language}_trimmed_filtered.jsonl.gz"
+        )
