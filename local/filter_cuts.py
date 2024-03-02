@@ -77,10 +77,10 @@ def filter_cuts(cut_set: CutSet, sp: spm.SentencePieceProcessor):
         # an utterance duration distribution for your dataset to select
         # the threshold
         total += 1
-        if c.duration < 1.0 or c.duration > 30.0:
-#            logging.warning(
-#                f"Exclude cut with ID {c.id} from training. Duration: {c.duration}"
-#            )
+        if c.duration < 1.0:
+            logging.warning(
+                f"Exclude cut with ID {c.id} from training. Duration: {c.duration}"
+            )
             removed += 1
             return False
 
@@ -105,15 +105,15 @@ def filter_cuts(cut_set: CutSet, sp: spm.SentencePieceProcessor):
 
         tokens = sp.encode(c.supervisions[0].text, out_type=str)
 
-        if T < len(tokens) * 2 or len(tokens) == 0:
-#            logging.warning(
-#                f"Exclude cut with ID {c.id} from training. "
-#                f"Number of frames (before subsampling): {c.num_frames}. "
-#                f"Number of frames (after subsampling): {T}. "
-#                f"Text: {c.supervisions[0].text}. "
-#                f"Tokens: {tokens}. "
-#                f"Number of tokens: {len(tokens)}"
-#            )
+        if T < len(tokens) or len(tokens) == 0:
+            logging.warning(
+                f"Exclude cut with ID {c.id} from training. "
+                f"Number of frames (before subsampling): {c.num_frames}. "
+                f"Number of frames (after subsampling): {T}. "
+                f"Text: {c.supervisions[0].text}. "
+                f"Tokens: {tokens}. "
+                f"Number of tokens: {len(tokens)}"
+            )
             removed += 1
             return False
 

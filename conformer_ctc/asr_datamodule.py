@@ -365,4 +365,4 @@ class GigaSpeechAsrDataModule:
     @lru_cache()
     def multivent_cuts(self) -> CutSet:
         logging.info("About to get multiVENT cuts")
-        return load_manifest_lazy(self.args.manifest_dir / "multivent_cuts_emergency_data_en_trimmed.jsonl.gz")
+        return load_manifest_lazy(self.args.manifest_dir / "multivent_cuts_emergency_data_en_trimmed_filtered.jsonl.gz")

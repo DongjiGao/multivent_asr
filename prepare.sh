@@ -9,6 +9,7 @@ stop_stage=100
 
 corpus_dir="/exp/mmohammadi/multiVENT/data_wav"
 data_dir="data"
+lang_dir="data/lang_bpe_500"
 manifest_dir="${data_dir}/manifests"
 
 feature_type="fbank"
@@ -25,12 +26,6 @@ log() {
 
 events=(
     emergency_data
-    political_data
-    social_data
-    technology_data
-)
-
-events=(
     political_data
     social_data
     technology_data
@@ -160,6 +155,19 @@ if [ $stage -le 5 ] && [ $stop_stage -ge 5 ]; then
         fi
         touch "${feature_dir}/.multivent.done"
     fi
+fi
+
+if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then
+    log "stage 6: Filtering cuts using BPE model"
+
+    for event in ${events[@]}; do
+        for language in ${languages[@]}; do
+            ./local/filter_cuts.py \
+                --bpe-model "${lang_dir}/bpe.model" \
+                --in-cuts "${feature_dir}/multivent_cuts_${event}_${language}_trimmed.jsonl.gz" \
+                --out-cuts "${feature_dir}/multivent_cuts_${event}_${language}_trimmed_filtered.jsonl.gz"
+        done
+    done
 fi
 
 exit 0;
