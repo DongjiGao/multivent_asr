@@ -135,7 +135,7 @@ def get_parser():
     parser.add_argument(
         "--otc-token",
         type=str,
-        default="_<star>",
+        default="▁<star>",
         help="OTC token",
     )
 
@@ -183,9 +183,8 @@ def get_params() -> AttributeDict:
             "nhead": 8,
             "attention_dim": 512,
             "num_decoder_layers": 6,
-            # parameters for decoding
-            "search_beam": 20,
-            "output_beam": 8,
+            # parameters for alignment
+            "beam_size": 8,
             "min_active_states": 30,
             "max_active_states": 10000,
             "use_double_scores": True,
@@ -231,7 +230,7 @@ def align_one_batch(
       Return the decoding result. See above description for the format of
       the returned dict. Note: If it decodes to nothing, then return None.
     """
-    device = model.device
+    device = next(model.parameters()).device
 
     feature = batch["inputs"]
     assert feature.ndim == 3
@@ -292,7 +291,7 @@ def align_one_batch(
     ]
     hyp_texts = ["".join(text_list).replace("▁", " ") for text_list in hyp_texts_list]
 
-    return {"otc-alignment", hyp_texts}
+    return {"otc-alignment": hyp_texts}
 
 
 def align_dataset(
@@ -336,7 +335,7 @@ def align_dataset(
             params=params,
             model=model,
             batch=batch,
-            grpah_compiler=graph_compiler,
+            graph_compiler=graph_compiler,
         )
 
         for key, hyps in hyps_dict.items():
