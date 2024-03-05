@@ -2,8 +2,11 @@
 
 # 2024 Dongji Gao
 
+import os
 import argparse
 from pathlib import Path
+
+from openai import OpenAI
 
 
 def get_args():
@@ -35,6 +38,56 @@ def is_eos(word):
     return False
 
 
+def set_up_client():
+    client = OpenAI(
+        api_key=os.environ.get("OPENAI_API_KEY"),
+    )
+    return client
+
+
+def resegment(reco_id, text_list, ctm_list, client):
+    assert len(text_list) == len(ctm_list)
+
+    text = " ".join(text_list)
+    response = client.chat.completions.create(
+        model="gpt-4",
+        messages=[
+            {
+                "role": "assistant",
+                "content": "Given the following text, identify and list each sentence separately, don't miss or add any word. return 1. plus identical text if there's only one sentence or one word:",
+            },
+            {"role": "user", "content": text},
+        ],
+    )
+    content = response.choices[0].message.content
+
+    num_sentences = len(content.split("\n"))
+    num_tokens = len(content.split())
+    num_words = num_tokens - num_sentences
+    assert num_words == len(text_list), (
+        content, text
+    )
+
+    segments = []
+    start = None
+    i = 0
+    for sentence in content.split("\n"):
+        text_list = []
+        for word in sentence.split()[1:]:
+            ctm_word, ctm_start, ctm_end = ctm_list[i]
+            i += 1
+
+            text_list.append(ctm_word)
+            if start is None:
+                start = ctm_start
+        end = ctm_end
+        text = " ".join(text_list)
+        segments.append((reco_id, start, end, text))
+        start = None
+
+    return segments
+
+
 def main():
     args = get_args()
     ctm_file = Path(args.ctm)
@@ -43,11 +96,16 @@ def main():
 
     segments = []
     text_list = []
+    ctm_list = []
+
+    client = set_up_client()
+
     prev_reco_id = None
     start = None
     with open(ctm_file, "r") as f:
         for line in f:
-            word_id, _, word_start_str, word_duration_str, word = line.strip().split(" ", 4)
+            word_id, _, word_st, word_dur, word = line.strip().split(" ", 4)
+
             reco_id = "_".join(word_id.split("_")[:-1])
 
             # new recordings
@@ -55,46 +113,74 @@ def main():
                 # append the left of previous recordings
                 if text_list:
                     end = word_end
-                    text = " ".join(text_list)
-                    segments.append((prev_reco_id, start, end, text))
+                    cur_seg_duration = end - start
+
+                    if cur_seg_duration > max_duration:
+                        try:
+                            result_segments = resegment(prev_reco_id, text_list, ctm_list, client)
+                        except:
+                            pass
+                    else:
+                        text = " ".join(text_list)
+                        result_segments = [(reco_id, start, end, text)]
+
+                    for cur_segment in result_segments:
+                        prev_reco_id, start, end, text = cur_segment
+                        segments.append((prev_reco_id, start, end, text))
+
                     text_list = []
+                    ctm_list = []
 
                 start = None
                 prev_reco_id = reco_id
 
-            # check duration:
-            cur_seg_duration = word_end - start if start is not None else 0
-            if cur_seg_duration >= max_duration:
-                # split by (possible) BOS
-                if word[0].isupper():
-                    end = word_end
-                    text = " ".join(text_list)
-                    segments.append((reco_id, start, end, text))
-                    text_list = []
-                    start = None
-
-
-            word_start = float(word_start_str)
-            word_duration = float(word_duration_str)
+            word_start = float(word_st)
+            word_duration = float(word_dur)
             word_end = word_start + word_duration
 
             text_list.append(word)
+            ctm_list.append((word, word_start, word_end))
 
             if start is None:
                 start = word_start
 
             if is_eos(word):
                 end = word_end
-                text = " ".join(text_list)
-                segments.append((reco_id, start, end, text))
+                cur_seg_duration = end - start
+
+                if cur_seg_duration > max_duration:
+                    try:
+                        result_segments = resegment(prev_reco_id, text_list, ctm_list, client)
+                    except:
+                        pass
+                else:
+                    text = " ".join(text_list)
+                    result_segments = [(reco_id, start, end, text)]
+
+                for cur_segment in result_segments:
+                    prev_reco_id, start, end, text = cur_segment
+                    segments.append((prev_reco_id, start, end, text))
+
                 text_list = []
+                ctm_list = []
                 start = None
 
-        # append the last one (it may not end with [., !, ?])
+        # append the last one of last recording (it may not end with [., !, ?])
         if text_list:
             end = word_end
-            text = " ".join(text_list)
-            segments.append((reco_id, start, end, text))
+
+            if cur_seg_duration > max_duration:
+                try:
+                    result_segments = resegment(prev_reco_id, text_list, ctm_list, client)
+                except:
+                    pass
+            else:
+                text = " ".join(text_list)
+                result_segments = [(reco_id, start, end, text)]
+
+            for cur_segment in result_segments:
+                prev_reco_id, start, end, text = cur_segment
+                segments.append((prev_reco_id, start, end, text))
 
     with open(output_dir / "text_raw", "w") as ot, open(
         output_dir / "segments_raw", "w"

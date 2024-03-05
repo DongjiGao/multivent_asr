@@ -31,6 +31,10 @@ events=(
     technology_data
 )
 
+events=(
+    emergency_data
+)
+
 languages=(
     en
 )
