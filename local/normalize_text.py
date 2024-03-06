@@ -83,7 +83,7 @@ def main():
             with open(output_dir / "segments", "w") as seg:
                 for line in sf:
                     seg_id, reco_id, start_time, end_time = line.strip().split()
-                    assert seg_id not in seg_dict
+                    assert seg_id not in seg_dict, (print(seg_id))
                     seg_dict[seg_id] = (reco_id, start_time, end_time)
 
                 for seg_id in seg_ids:

@@ -421,13 +421,13 @@ def main():
 
     # we need cut ids to display recognition results.
     args.return_cuts = True
-    gigaspeech = MultiVENTAsrDataModule(args)
+    multivent = MultiVENTAsrDataModule(args)
 
-    multivent_cuts = gigaspeech.multivent_cuts()
+    multivent_cuts = multivent.multivent_cuts()
 
-    multivent_dl = gigaspeech.test_dataloaders(multivent_cuts)
+    multivent_dl = multivent.test_dataloaders(multivent_cuts)
 
-    test_sets = ["multiVENT"]
+    test_sets = [f"{params.event}_{params.language}"]
     test_dls = [multivent_dl]
 
     for test_set, test_dl in zip(test_sets, test_dls):

@@ -20,20 +20,32 @@ log() {
 
 events=(
     emergency_data
+    political_data
+    social_data
+    technology_data
 )
 
 languages=(
     en
 )
 
+#for event in ${events[@]}; do
+#    for language in ${languages[@]}; do
+#        log "Aligning ${event} ${language}"
+#        ./conformer_ctc/otc_alignment.py \
+#            --event "${event}" \
+#            --language "${language}" \
+#            --method "${decoding_method}" \
+#            --exp-dir "${exp_dir}" \
+#            --lang-dir "${lang_dir}" 
+#   done
+#done
+
 for event in ${events[@]}; do
     for language in ${languages[@]}; do
-        log "Aligning ${event} ${language}"
-        ./conformer_ctc/otc_alignment.py \
-            --event "${event}" \
-            --language "${language}" \
-            --method "${decoding_method}" \
-            --exp-dir "${exp_dir}" \
-            --lang-dir "${lang_dir}" 
-   done
+        local/post_process_text.py \
+            --text "${exp_dir}/otc-alignment-${event}_${language}.txt" \
+            --output-dir "data/${event}_${language}"
+        sort "data/${event}_${language}/otc_aligned_text.txt" > "data/${event}_${language}/otc_aligned_text_sorted.txt"
+    done
 done
