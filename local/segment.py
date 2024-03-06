@@ -119,10 +119,11 @@ def main():
                         try:
                             result_segments = resegment(prev_reco_id, text_list, ctm_list, client)
                         except:
-                            pass
+                            text = " ".join(text_list)
+                            result_segments = [(prev_reco_id, start, end, text)]
                     else:
                         text = " ".join(text_list)
-                        result_segments = [(reco_id, start, end, text)]
+                        result_segments = [(prev_reco_id, start, end, text)]
 
                     for cur_segment in result_segments:
                         prev_reco_id, start, end, text = cur_segment
@@ -152,7 +153,8 @@ def main():
                     try:
                         result_segments = resegment(prev_reco_id, text_list, ctm_list, client)
                     except:
-                        pass
+                        text = " ".join(text_list)
+                        result_segments = [(reco_id, start, end, text)]
                 else:
                     text = " ".join(text_list)
                     result_segments = [(reco_id, start, end, text)]
