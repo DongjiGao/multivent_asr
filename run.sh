@@ -7,7 +7,7 @@ set -euo pipefail
 stage=0
 stop_stage=100
 
-finetuning_exp_dir=""
+finetune_exp_dir="pruned_transducer_stateless7/exp"
 pretrained_model="pretrained_model/icefall-asr-librispeech-pruned-transducer-stateless7-2022-11-11/"
 exp_dir="conformer_ctc/exp"
 lang_dir="data/lang_bpe_500"
@@ -42,11 +42,12 @@ fi
 
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     log "Stage 0: Fine-tuning Librispeech Transducer model on multiVent dataset."
+    mkdir -p "${finetune_exp_dir}"
     ./pruned_transducer_stateless7/finetune.py \
         --world-size ${gpus} \
         --num-epochs 10 \
         --start-epoch 1 \
-        --exp-dir "${finetuning_exp_dir}" \
+        --exp-dir "${finetune_exp_dir}" \
         --base-lr 0.005 \
         --lr-epochs 50 \
         --lr-batches 50000 \
