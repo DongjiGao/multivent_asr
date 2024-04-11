@@ -19,8 +19,8 @@ def get_args():
     parser.add_argument(
         "--model-size",
         type=str,
-        choices=["tiny", "base", "small", "medium"],
-        default="medium",
+        choices=["tiny", "base", "small", "medium", "large"],
+        default="large",
         help="model size",
     )
     parser.add_argument(
@@ -45,8 +45,13 @@ def main():
     language = args.language
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
+    print(f"device: {device}")
 
-    model = whisper.load_model(f"{model_size}.{language}", device=device)
+    if model_size == "large":
+        model = whisper.load_model(f"{model_size}", device=device)
+    else:
+        model = whisper.load_model(f"{model_size}.{language}", device=device)
+
 
     with open(output_dir / "ctm", "w") as ctm:
         with open(wav_scp, "r") as ws:
@@ -63,6 +68,7 @@ def main():
                     beam_size=5,
                     best_of=5,
                     temperature=(0.0, 0.2, 0.4, 0.6, 0.8, 1.0),
+                    language="en",
                 )
 
                 segments = result["segments"]

@@ -171,4 +171,16 @@ if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then
     done
 fi
 
+if [ ${stage} -le 7 ] && [ ${stop_stage} -ge 7 ]; then
+    log "Stage 7: Combine cuts for finetuning"
+
+    for language in ${languages[@]}; do
+        cat <(gunzip -c "${feature_dir}/multivent_cuts_emergency_data_${language}_trimmed_filtered.jsonl.gz") \
+            <(gunzip -c "${feature_dir}/multivent_cuts_political_data_${language}_trimmed_filtered.jsonl.gz") \
+            <(gunzip -c "${feature_dir}/multivent_cuts_social_data_${language}_trimmed_filtered.jsonl.gz") \
+            <(gunzip -c "${feature_dir}/multivent_cuts_technology_data_${language}_trimmed_filtered.jsonl.gz") | shuf | \
+            gzip -c > "${feature_dir}/multivent_cuts_combined_${language}_trimmed_filtered.jsonl.gz"
+    done
+fi
+
 exit 0;
