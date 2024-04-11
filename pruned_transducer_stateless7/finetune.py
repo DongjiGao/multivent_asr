@@ -56,7 +56,7 @@ import sentencepiece as spm
 import torch
 import torch.multiprocessing as mp
 import torch.nn as nn
-from asr_datamodule import MultiVENTAsrDataModule
+from multivent import MultiVENTAsrDataModule
 from decoder import Decoder
 from joiner import Joiner
 from lhotse.cut import Cut, CutSet
@@ -1192,7 +1192,7 @@ def run(rank, world_size, args):
     )
 
     # TODO: add validation cuts
-    valid_cuts = multivent.train_cuts()
+    valid_cuts = multivent.finetune_cuts()
     valid_dl = multivent.valid_dataloaders(valid_cuts)
 
     if not params.print_diagnostics:

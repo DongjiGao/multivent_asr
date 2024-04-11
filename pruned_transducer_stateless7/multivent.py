@@ -48,7 +48,7 @@ class _SeedWorkers:
         fix_random_seed(self.seed + worker_id)
 
 
-class GigaSpeechAsrDataModule:
+class MultiVENTAsrDataModule:
     """
     DataModule for k2 ASR experiments.
     It assumes there is always one train and valid dataloader,
@@ -179,17 +179,17 @@ class GigaSpeechAsrDataModule:
         group.add_argument(
             "--enable-musan",
             type=str2bool,
-            default=True,
+            default=False,
             help="When enabled, select noise from MUSAN and mix it "
             "with training dataset. ",
         )
 
         # GigaSpeech specific arguments
         group.add_argument(
-            "--subset",
+            "--language",
             type=str,
-            default="XL",
-            help="Select the GigaSpeech subset (XS|S|M|L|XL)",
+            default="en",
+            help="Select the langauge (en|chn|arab|kor|rus)",
         )
         group.add_argument(
             "--small-dev",
@@ -365,9 +365,11 @@ class GigaSpeechAsrDataModule:
     def test_dataloaders(self, cuts: CutSet) -> DataLoader:
         logging.debug("About to create test dataset")
         test = K2SpeechRecognitionDataset(
-            input_strategy=OnTheFlyFeatures(Fbank(FbankConfig(num_mel_bins=80)))
-            if self.args.on_the_fly_feats
-            else PrecomputedFeatures(),
+            input_strategy=(
+                OnTheFlyFeatures(Fbank(FbankConfig(num_mel_bins=80)))
+                if self.args.on_the_fly_feats
+                else PrecomputedFeatures()
+            ),
             return_cuts=self.args.return_cuts,
         )
         sampler = DynamicBucketingSampler(
@@ -385,9 +387,12 @@ class GigaSpeechAsrDataModule:
         return test_dl
 
     @lru_cache()
-    def train_cuts(self) -> CutSet:
-        logging.info(f"About to get train_{self.args.subset} cuts")
-        path = self.args.manifest_dir / f"cuts_{self.args.subset}.jsonl.gz"
+    def finetune_cuts(self) -> CutSet:
+        logging.info(f"About to get train_{self.args.language} cuts")
+        path = (
+            self.args.manifest_dir
+            / f"multivent_cuts_combined_{self.args.language}_trimmed_filtered.jsonl.gz"
+        )
         cuts_train = CutSet.from_jsonl_lazy(path)
         return cuts_train
 
@@ -399,8 +404,3 @@ class GigaSpeechAsrDataModule:
             return cuts_valid.subset(first=1000)
         else:
             return cuts_valid
-
-    @lru_cache()
-    def test_cuts(self) -> CutSet:
-        logging.info("About to get test cuts")
-        return load_manifest_lazy(self.args.manifest_dir / "cuts_TEST.jsonl.gz")
