@@ -184,3 +184,4 @@ if [ ${stage} -le 7 ] && [ ${stop_stage} -ge 7 ]; then
 fi
 
 exit 0;
+:q
