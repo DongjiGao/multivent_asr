@@ -399,8 +399,11 @@ class MultiVENTAsrDataModule:
     @lru_cache()
     def dev_cuts(self) -> CutSet:
         logging.info("About to get dev cuts")
-        cuts_valid = load_manifest_lazy(self.args.manifest_dir / "cuts_DEV.jsonl.gz")
-        if self.args.small_dev:
-            return cuts_valid.subset(first=1000)
-        else:
-            return cuts_valid
+        cuts_dev = load_manifest_lazy(self.args.manifest_dir / "multivent_cuts_dev_trimmed.jsonl.gz")
+        return cuts_dev
+
+    @lru_cache()
+    def test_cuts(self) -> CutSet:
+        logging.info("About to get dev cuts")
+        cuts_test = load_manifest_lazy(self.args.manifest_dir / "multivent_cuts_test_trimmed.jsonl.gz")
+        return cuts_test

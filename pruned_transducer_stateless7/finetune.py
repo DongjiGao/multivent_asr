@@ -1192,7 +1192,7 @@ def run(rank, world_size, args):
     )
 
     # TODO: add validation cuts
-    valid_cuts = multivent.finetune_cuts()
+    valid_cuts = multivent.dev_cuts()
     valid_dl = multivent.valid_dataloaders(valid_cuts)
 
     if not params.print_diagnostics:
