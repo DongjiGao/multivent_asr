@@ -180,7 +180,9 @@ if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then
             ./local/filter_cuts.py \
                 --bpe-model "${lang_dir}/bpe.model" \
                 --in-cuts "${feature_dir}/multivent_cuts_${event}_${language}_trimmed.jsonl.gz" \
-                --out-cuts "${feature_dir}/multivent_cuts_${event}_${language}_trimmed_filtered.jsonl.gz" 
+                --out-cuts "${feature_dir}/multivent_cuts_${event}_${language}_trimmed_filtered.jsonl.gz" \
+                --skip-lists "${data_dir}/dev/dev.list" \
+                --skip-lists "${data_dir}/test/test.list" 
         done
     done
 fi

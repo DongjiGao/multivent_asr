@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# 2024 Dongji Gao
+# 2024 Johns Hopkins University (author: Dongji Gao)
 
 import argparse
 from pathlib import Path

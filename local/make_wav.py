@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# 2024 Dongji Gao
+# 2024 Johns Hopkins University (author: Dongji Gao)
 
 import argparse
 from pathlib import Path
@@ -58,7 +58,7 @@ def main():
                 .run()
             )
 
-            ws.write(f"{wav_id} {output_wav_dir}/{wav_id}.wav\n")
+            ws.write(f"{wav_id} {Path.cwd()}/{output_wav_dir}/{wav_id}.wav\n")
 
 
 if __name__ == "__main__":

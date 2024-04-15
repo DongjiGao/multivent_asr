@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# 2024 Dongji Gao
+# 2024 John Hopkins University (author: Dongji Gao)
 
 import os
 import argparse

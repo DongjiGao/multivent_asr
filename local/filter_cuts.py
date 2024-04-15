@@ -58,10 +58,17 @@ def get_args():
         help="Path to the output cutset",
     )
 
+    parser.add_argument(
+        "--skip-lists",
+        type=Path,
+        action="append",
+        help="Path to the skip cutset",
+    )
+
     return parser.parse_args()
 
 
-def filter_cuts(cut_set: CutSet, sp: spm.SentencePieceProcessor):
+def filter_cuts(cut_set: CutSet, sp: spm.SentencePieceProcessor, skip_set: set):
     total = 0  # number of total utterances before removal
     removed = 0  # number of removed utterances
 
@@ -77,10 +84,17 @@ def filter_cuts(cut_set: CutSet, sp: spm.SentencePieceProcessor):
         # an utterance duration distribution for your dataset to select
         # the threshold
         total += 1
-        if c.duration < 1.0:
+        if c.recording_id in skip_set:
             logging.warning(
-                f"Exclude cut with ID {c.id} from training. Duration: {c.duration}"
+                f"Exclude cut with ID {c.id} from training."
             )
+            removed += 1
+            return False
+        
+        if c.duration < 1.0:
+#            logging.warning(
+#                f"Exclude cut with ID {c.id} from training. Duration: {c.duration}"
+#            )
             removed += 1
             return False
 
@@ -106,14 +120,14 @@ def filter_cuts(cut_set: CutSet, sp: spm.SentencePieceProcessor):
         tokens = sp.encode(c.supervisions[0].text, out_type=str)
 
         if T < len(tokens) or len(tokens) == 0:
-            logging.warning(
-                f"Exclude cut with ID {c.id} from training. "
-                f"Number of frames (before subsampling): {c.num_frames}. "
-                f"Number of frames (after subsampling): {T}. "
-                f"Text: {c.supervisions[0].text}. "
-                f"Tokens: {tokens}. "
-                f"Number of tokens: {len(tokens)}"
-            )
+#            logging.warning(
+#                f"Exclude cut with ID {c.id} from training. "
+#                f"Number of frames (before subsampling): {c.num_frames}. "
+#                f"Number of frames (after subsampling): {T}. "
+#                f"Text: {c.supervisions[0].text}. "
+#                f"Tokens: {tokens}. "
+#                f"Number of tokens: {len(tokens)}"
+#            )
             removed += 1
             return False
 
@@ -133,6 +147,12 @@ def main():
     args = get_args()
     logging.info(vars(args))
 
+    skip_set = set()
+    for skip_list in args.skip_lists:
+        with open(skip_list) as sl:
+            for line in sl:
+                skip_set.add(line.strip().split()[0])
+
     if args.out_cuts.is_file():
         logging.info(f"{args.out_cuts} already exists - skipping")
         return
@@ -146,7 +166,7 @@ def main():
     cut_set = load_manifest_lazy(args.in_cuts)
     assert isinstance(cut_set, CutSet)
 
-    cut_set = filter_cuts(cut_set, sp)
+    cut_set = filter_cuts(cut_set, sp, skip_set)
     logging.info(f"Saving to {args.out_cuts}")
     args.out_cuts.parent.mkdir(parents=True, exist_ok=True)
     cut_set.to_file(args.out_cuts)
