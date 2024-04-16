@@ -13,7 +13,7 @@ This step generates [Lhotse](https://github.com/lhotse-speech/lhotse) CutSets of
   --corpus-dir "${corpus_dir}" \
   --lang-dir "${pretrained_lang_dir}"
 ```
-Note: To use GPT for resegmentation, please set the OPENAI_API_KEY by
+**Note**: To use GPT for resegmentation, please set the OPENAI_API_KEY by
 ```
 export OPEN_AI_KEY=YOUR_OPEN_AI_KEY
 ```
