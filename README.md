@@ -49,6 +49,7 @@ We tried two pretrained models: [one trained on LibriSpeech (1,000 hours)](https
 </table>
 
 ### OTC flexible alignment
+This step performs OTC flexible alignment using an external ASR model. The flexible alignment modifies the result from Whisper by replacing suspicious or incorrectly inserted tokens with '*', and by placing a '*' where a word is missing. This can provide detailed information to human annotators about which parts are likely to be wrong.
 ```
 for event in ${events[@]}; do
   for language in ${languages[@]}; do
@@ -60,6 +61,7 @@ for event in ${events[@]}; do
       --lang-dir "${lang_dir}" 
 ```
 ### Post-processing
+This step converts the aligned text back to WHISPER style for readability.
 ```
 for event in ${events[@]}; do
   for language in ${languages[@]}; do
