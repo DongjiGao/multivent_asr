@@ -1191,7 +1191,6 @@ def run(rank, world_size, args):
         train_cuts, sampler_state_dict=sampler_state_dict
     )
 
-    # TODO: add validation cuts
     valid_cuts = multivent.dev_cuts()
     valid_dl = multivent.valid_dataloaders(valid_cuts)
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# 2024 Dongji Gao
+# 2024 Johns Hopkins University (author: Dongji Gao)
 
 import argparse
 from pathlib import Path
@@ -33,9 +33,9 @@ def align_text(text_list, whisper_text_list, error_token="ERR"):
     for i, word in enumerate(text_list):
         if word == "<star>":
             text_list[i] = "*"
-
     result = []
     ali = align(text_list, whisper_text_list, error_token)
+
     for word, whisper_word in ali:
         if word == "*":
             aligned_word = word
@@ -47,9 +47,9 @@ def align_text(text_list, whisper_text_list, error_token="ERR"):
             aligned_word = word
         else:
             aligned_word = whisper_word
-
         result.append(aligned_word)
     return result
+
 
 def main():
     args = arg_parser()
@@ -78,7 +78,6 @@ def main():
                 aligned_text_list[0] = aligned_text_list[0].capitalize()
 
                 oat.write(f"{utt_id} {' '.join(aligned_text_list)}\n")
-
 
 
 if __name__ == "__main__":

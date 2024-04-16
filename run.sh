@@ -1,18 +1,21 @@
 #!/usr/bin/env bash
 
-# 2024 Dongji Gao
+# 2024 Johns Hopkins University (author: Dongji Gao)
 
 set -euo pipefail
 
 stage=0
 stop_stage=100
 
-finetune_exp_dir="pruned_transducer_stateless7/exp"
-pretrained_model="pretrained_model/icefall-asr-librispeech-pruned-transducer-stateless7-2022-11-11/"
-exp_dir="conformer_ctc/exp"
-lang_dir="data/lang_bpe_500"
-decoding_method="1best"
+corpus_dir="/exp/mmohammadi/multiVENT/data_wav"
 
+pretrained_model_dir="pretrained_model/icefall-asr-librispeech-pruned-transducer-stateless7-2022-11-11/"
+#pretrained_model_dir="pretrained_model/icefall-asr-gigaspeech-zipformer-2023-10-17"
+pretrained_lang_dir="${pretrained_model_dir}/data/lang_bpe_500"
+finetune_out_exp_dir="pruned_transducer_stateless7/exp"
+exp_dir="conformer_ctc/exp"
+
+decoding_method="modified_beam_search"
 gpus=1
 
 . ./cmd.sh
@@ -35,31 +38,47 @@ languages=(
     en
 )
 
-if [ ${stage} -le -1 ] && [ ${stop_stage} -ge -1 ]; then
-    log "stage -1: Preparing transcribed and segmented multiVENT Lhotse dataset."
-    ./prepare.sh
+if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
+    log "stage 0: Preparing transcribed and segmented multiVENT Lhotse dataset."
+    ./prepare.sh \
+        --corpus-dir "${corpus_dir}" \
+        --lang-dir "${pretrained_lang_dir}"
 fi
 
-if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
-    log "Stage 0: Fine-tuning Librispeech Transducer model on multiVent dataset."
-    mkdir -p "${finetune_exp_dir}"
+if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
+    log "Stage 1: Fine-tuning Zipformer Transducer model on MultiVent dataset."
+    mkdir -p "${finetune_out_exp_dir}"
     ./pruned_transducer_stateless7/finetune.py \
         --world-size ${gpus} \
-        --num-epochs 10 \
+        --num-epochs 20 \
         --start-epoch 1 \
-        --exp-dir "${finetune_exp_dir}" \
+        --exp-dir "${finetune_out_exp_dir}" \
         --base-lr 0.005 \
-        --lr-epochs 50 \
-        --lr-batches 50000 \
-        --bpe-model "${pretrained_model}/data/lang_bpe_500/bpe.model" \
+        --lr-epochs 100 \
+        --lr-batches 100000 \
+        --bpe-model "${pretrained_model_dir}/data/lang_bpe_500/bpe.model" \
         --do-finetune True \
-        --finetune-ckpt "${pretrained_model}/exp/pretrained.pt" \
+        --finetune-ckpt "${pretrained_model_dir}/exp/pretrained.pt" \
         --max-duration 500 \
         --language "en"
 fi
 
-if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
-   log "Stage 1: Doing OTC flexible alingment." 
+echo "${pretrained_lang_dir}"
+if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
+    log "Stage 2: Decoding with the fine-tuned model."
+    ./pruned_transducer_stateless7/decode.py \
+        --epoch 20 \
+        --avg 5 \
+        --exp-dir "${finetune_out_exp_dir}" \
+        --max-duration 600 \
+        --decoding-method "${decoding_method}" \
+        --beam-size 8 \
+        --lang-dir "${pretrained_lang_dir}" \
+        --bpe-model "${pretrained_lang_dir}/bpe.model"
+fi
+
+if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
+   log "Stage 3: Doing OTC flexible alingment." 
     for event in ${events[@]}; do
         for language in ${languages[@]}; do
             log "Aligning ${event} ${language}"
@@ -73,8 +92,8 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
     done
 fi
 
-if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
-    log "Stage 2: Post-processing OTC aligned text for better readability"
+if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
+    log "Stage 4: Post-processing OTC aligned text for better readability"
     for event in ${events[@]}; do
         for language in ${languages[@]}; do
             local/post_process_text.py \

@@ -404,6 +404,6 @@ class MultiVENTAsrDataModule:
 
     @lru_cache()
     def test_cuts(self) -> CutSet:
-        logging.info("About to get dev cuts")
+        logging.info("About to get test cuts")
         cuts_test = load_manifest_lazy(self.args.manifest_dir / "multivent_cuts_test_trimmed.jsonl.gz")
         return cuts_test
