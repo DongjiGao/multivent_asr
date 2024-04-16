@@ -47,6 +47,24 @@ We tried two pretrained models: [one trained on LibriSpeech (1,000 hours)](https
     <td>36.94</td>
   </tr>
 </table>
-### OTC flexible alignment
 
+### OTC flexible alignment
+```
+for event in ${events[@]}; do
+  for language in ${languages[@]}; do
+    ./conformer_ctc/otc_alignment.py \
+      --event "${event}" \
+      --language "${language}" \
+      --method "${decoding_method}" \
+      --exp-dir "${exp_dir}" \
+      --lang-dir "${lang_dir}" 
+```
 ### Post-processing
+```
+for event in ${events[@]}; do
+  for language in ${languages[@]}; do
+    local/post_process_text.py \
+      --text "${exp_dir}/otc-alignment-${event}_${language}.txt" \
+      --whisper-text "data/${event}_${language}/text_raw" \
+      --output-dir "data/${event}_${language}"
+```
