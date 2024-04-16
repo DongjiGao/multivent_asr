@@ -34,7 +34,7 @@ We fine-tune a pre-trained [Icefall](https://github.com/k2-fsa/icefall) Zipforme
   --max-duration 500 \
   --language "en"
 ```
-We tried two pretrained models: one trained on LibriSpeech (1,000 hours) and the other on GigaSpeech (10,000 hours). Here are the fine-tuning results on the test set of MultiVENT created by Dongji Gao:
+We tried two pretrained models: [one trained on LibriSpeech (1,000 hours)](https://huggingface.co/csukuangfj/icefall-asr-librispeech-pruned-transducer-stateless7-2022-11-11) and [the other on GigaSpeech (10,000 hours)](https://huggingface.co/yfyeung/icefall-asr-gigaspeech-zipformer-2023-10-17). Here are the fine-tuning results on the test set of MultiVENT created by Dongji Gao:
 <table>
   <tr>
     <td></td>
